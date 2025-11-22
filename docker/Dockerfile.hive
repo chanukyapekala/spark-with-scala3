@@ -1,0 +1,14 @@
+FROM apache/hive:4.0.0
+
+USER root
+
+# Install netcat for healthcheck
+RUN apt-get update && \
+    apt-get install -y netcat && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download and install PostgreSQL JDBC driver
+ADD https://jdbc.postgresql.org/download/postgresql-42.7.1.jar /opt/hive/lib/postgresql-jdbc.jar
+RUN chmod 644 /opt/hive/lib/postgresql-jdbc.jar
+
+USER hive

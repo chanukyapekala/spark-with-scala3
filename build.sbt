@@ -5,8 +5,8 @@ version := "0.1.0"
 scalaVersion := "3.5.2"
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" % "spark-sql_2.13" % "3.5.3",
-  "org.apache.spark" % "spark-core_2.13" % "3.5.3"
+  ("org.apache.spark" %% "spark-sql" % "3.5.3").cross(CrossVersion.for3Use2_13),
+  ("org.apache.spark" %% "spark-core" % "3.5.3").cross(CrossVersion.for3Use2_13)
 )
 
 // Spark uses reflection which needs this for Scala 3
@@ -35,3 +35,22 @@ javaOptions ++= Seq(
   "--add-opens=java.base/javax.security.auth=ALL-UNNAMED",
   "-Djava.security.manager=allow"
 )
+
+// Assembly settings for fat jar
+import sbtassembly.AssemblyPlugin.autoImport._
+
+assembly / assemblyJarName := "scala3-spark-assembly.jar"
+
+assembly / assemblyMergeStrategy := {
+  case PathList("META-INF", xs @ _*) => xs match {
+    case "MANIFEST.MF" :: Nil => MergeStrategy.discard
+    case "services" :: _ => MergeStrategy.concat
+    case _ => MergeStrategy.discard
+  }
+  case "reference.conf" => MergeStrategy.concat
+  case "application.conf" => MergeStrategy.concat
+  case x if x.endsWith(".proto") => MergeStrategy.rename
+  case PathList("scala", xs @ _*) => MergeStrategy.first
+  case x if x.contains("scala-library") => MergeStrategy.first
+  case _ => MergeStrategy.first
+}

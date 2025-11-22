@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.bsp
+.metals
+.vscode
+*.iml
+
+# Build artifacts
+target/
+project/target/
+project/project/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation (built into image where needed)
+*.md
+
+# Temporary files
+*.swp
+*.swo
+*~
+.tmp
+
+# Spark
+metastore_db/
+spark-warehouse/
+derby.log

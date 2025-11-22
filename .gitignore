@@ -55,3 +55,7 @@ derby.log
 *.swo
 *~
 .tmp
+
+# Docker
+.docker/
+docker-compose.override.yml

@@ -30,7 +30,7 @@ class DataProcessor(spark: SparkSession) {
    * @return Filtered DataFrame
    */
   def filterByAge(df: DataFrame, minAge: Int): DataFrame = {
-    df.filter($"age" >= minAge)
+    df.filter(col("age") >= minAge)
   }
 
   /**
@@ -39,12 +39,12 @@ class DataProcessor(spark: SparkSession) {
    * @return DataFrame with city, avg_age, and count columns
    */
   def averageAgeByCity(df: DataFrame): DataFrame = {
-    df.groupBy($"city")
+    df.groupBy(col("city"))
       .agg(
-        avg($"age").as("avg_age"),
-        count($"name").as("count")
+        avg(col("age")).as("avg_age"),
+        count(col("name")).as("count")
       )
-      .orderBy($"avg_age".desc)
+      .orderBy(col("avg_age").desc)
   }
 
   /**
@@ -55,11 +55,11 @@ class DataProcessor(spark: SparkSession) {
   def createSummary(df: DataFrame): DataFrame = {
     df.select(
       concat(
-        $"name",
+        col("name"),
         lit(" is "),
-        $"age",
+        col("age"),
         lit(" years old and lives in "),
-        $"city"
+        col("city")
       ).as("summary")
     )
   }

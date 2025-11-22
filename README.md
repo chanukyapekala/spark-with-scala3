@@ -27,8 +27,11 @@ scala3-spark/
 - **Type-Safe Operations** - DataFrame to case class conversions
 - **Modular Architecture** - Clean separation of concerns
 - **Java 17+ Compatible** - Includes necessary JVM options
+- **🐳 Docker Support** - Complete containerized setup with Hive Metastore
 
-> **📖 Note**: This project uses Scala 3 with Spark libraries compiled for Scala 2.13. See [SCALA3_MIGRATION.md](SCALA3_MIGRATION.md) for a detailed explanation of why and how this works, including limitations and workarounds.
+> **📖 Notes**:
+> - This project uses Scala 3 with Spark libraries compiled for Scala 2.13. See [SCALA3_MIGRATION.md](SCALA3_MIGRATION.md) for details.
+> - Docker setup with Hive Metastore available. See [DOCKER.md](DOCKER.md) for containerized deployment.
 
 ## Architecture
 
@@ -53,25 +56,52 @@ scala3-spark/
 
 ## Running the Application
 
-### Run the application
+### Local Development
+
+#### Run the application
 ```bash
 sbt run
 ```
 
-### Compile only
+#### Compile only
 ```bash
 sbt compile
 ```
 
-### Package as JAR
+#### Package as JAR
 ```bash
 sbt package
 ```
 
-### Clean build artifacts
+#### Clean build artifacts
 ```bash
 sbt clean
 ```
+
+### Docker (Recommended for Production)
+
+#### Quick Start
+```bash
+# Start all services (Spark + Hive Metastore + PostgreSQL)
+docker-compose up -d
+
+# View application logs
+docker-compose logs -f spark-app
+
+# Stop services
+docker-compose down
+```
+
+#### With Spark Cluster
+```bash
+# Start with Spark master and workers
+docker-compose --profile cluster up -d
+
+# Access Spark Master UI at http://localhost:8080
+# Access Spark Worker UI at http://localhost:8081
+```
+
+See [DOCKER.md](DOCKER.md) for complete Docker documentation.
 
 ## Java 17+ Compatibility
 
