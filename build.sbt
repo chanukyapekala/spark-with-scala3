@@ -6,7 +6,10 @@ scalaVersion := "3.5.2"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-sql_2.13" % "3.5.3",
-  "org.apache.spark" % "spark-core_2.13" % "3.5.3"
+  "org.apache.spark" % "spark-core_2.13" % "3.5.3",
+  "org.apache.logging.log4j" % "log4j-api" % "2.20.0",
+  "org.apache.logging.log4j" % "log4j-core" % "2.20.0",
+  "org.apache.logging.log4j" % "log4j-slf4j2-impl" % "2.20.0"
 )
 
 // Spark uses reflection which needs this for Scala 3

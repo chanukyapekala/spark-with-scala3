@@ -18,6 +18,8 @@ object SparkSessionBuilder {
       .master("local[*]")
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "4")
+      .config("spark.driver.bindAddress", "127.0.0.1")
+      .config("spark.driver.host", "localhost")
       .getOrCreate()
   }
 }
