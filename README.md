@@ -220,17 +220,137 @@ Args=[--class,etl.SparkETLPipeline,s3://your-bucket/jars/etl-assembly.jar]
 
 ### Docker Deployment
 
+This project includes a **single multi-stage Dockerfile** that builds both modules.
+
+#### Quick Start with Docker Compose
+
 ```bash
-# Build preprocessing image
-docker build -t preprocessing:latest preprocessing/
+# Build and run the entire pipeline
+docker-compose up --build
 
-# Build ETL image
-docker build -t etl:latest etl/
+# Run in background
+docker-compose up -d --build
 
-# Run pipeline
-docker run preprocessing:latest
-docker run etl:latest
+# View logs
+docker-compose logs -f
+
+# Stop everything
+docker-compose down
 ```
+
+#### Build Individual Images
+
+**Preprocessing (Scala 3):**
+```bash
+docker build \
+  --build-arg MODULE=preprocessing \
+  --target preprocessing \
+  -t preprocessing:latest \
+  .
+```
+
+**ETL (Scala 2.13 + Spark):**
+```bash
+docker build \
+  --build-arg MODULE=etl \
+  --target etl \
+  -t etl:latest \
+  .
+```
+
+#### Running Containers
+
+**Preprocessing:**
+```bash
+docker run \
+  -v $(pwd)/data:/app/data \
+  preprocessing:latest
+```
+
+**ETL:**
+```bash
+docker run \
+  -v $(pwd)/data:/app/data \
+  -p 4040:4040 \
+  etl:latest
+
+# Access Spark UI at http://localhost:4040
+```
+
+#### Complete Pipeline Example
+
+```bash
+# 1. Generate test data (local)
+sbt "preprocessing/runMain generateTestData 1000"
+
+# 2. Run preprocessing (Docker)
+docker run -v $(pwd)/data:/app/data preprocessing:latest
+
+# 3. Run ETL (Docker)
+docker run -v $(pwd)/data:/app/data -p 4040:4040 etl:latest
+```
+
+#### Production Deployment
+
+**AWS ECR:**
+```bash
+# Login to ECR
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin \
+  123456789.dkr.ecr.us-east-1.amazonaws.com
+
+# Build and push
+docker build --build-arg MODULE=preprocessing \
+  -t 123456789.dkr.ecr.us-east-1.amazonaws.com/preprocessing:latest .
+docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/preprocessing:latest
+
+docker build --build-arg MODULE=etl \
+  -t 123456789.dkr.ecr.us-east-1.amazonaws.com/etl:latest .
+docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/etl:latest
+```
+
+**Docker Compose Workflow:**
+```bash
+# Build both images
+docker-compose build
+
+# Run preprocessing only
+docker-compose up preprocessing
+
+# Run full pipeline
+docker-compose up
+
+# Stop and cleanup
+docker-compose down
+```
+
+**Environment Variables:**
+
+| Module | Variable | Default | Description |
+|--------|----------|---------|-------------|
+| preprocessing | `ENV` | `local` | Environment (local/production) |
+| preprocessing | `S3_BUCKET` | - | S3 bucket for production |
+| etl | `ENV` | `local` | Environment |
+| etl | `SPARK_MASTER` | `local[*]` | Spark master URL |
+
+**Volume Mounts:**
+```bash
+# Mount data directory
+docker run -v $(pwd)/data:/app/data preprocessing:latest
+
+# Data structure:
+# data/
+# ├── raw/        # Input data
+# ├── processed/  # Parquet from preprocessing
+# └── output/     # Results from ETL
+```
+
+**Advanced Docker Topics:**
+- Multi-stage build optimizations
+- Kubernetes deployment with Jobs
+- ECS task definitions
+- Security scanning with Trivy
+- CI/CD with GitHub Actions
 
 ## Module Communication
 

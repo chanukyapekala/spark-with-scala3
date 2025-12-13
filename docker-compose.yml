@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Preprocessing service (Scala 3)
+  preprocessing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: preprocessing
+      target: preprocessing
+    image: spark-with-scala3/preprocessing:latest
+    container_name: preprocessing
+    volumes:
+      - ./data:/app/data
+    environment:
+      - ENV=local
+    networks:
+      - spark-network
+
+  # ETL service (Scala 2.13 + Spark)
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: etl
+      target: etl
+    image: spark-with-scala3/etl:latest
+    container_name: etl
+    volumes:
+      - ./data:/app/data
+    environment:
+      - ENV=local
+      - SPARK_MASTER=local[*]
+    ports:
+      - "4040:4040"  # Spark UI
+    networks:
+      - spark-network
+    depends_on:
+      - preprocessing
+
+networks:
+  spark-network:
+    driver: bridge
