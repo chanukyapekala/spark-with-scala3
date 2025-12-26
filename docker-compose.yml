@@ -1,24 +1,157 @@
 version: '3.8'
 
 services:
-  # Preprocessing service (Scala 3)
-  preprocessing:
+  # ===========================================
+  # Kafka Infrastructure
+  # ===========================================
+
+  # Zookeeper for Kafka coordination
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - streaming-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka broker
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9093,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+    networks:
+      - streaming-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  # Kafka UI for monitoring
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9093
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - streaming-network
+
+  # ===========================================
+  # Application Services
+  # ===========================================
+
+  # Streaming Generator (Scala 3) - Publishes to Kafka
+  streaming-generator:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         MODULE: preprocessing
       target: preprocessing
-    image: spark-with-scala3/preprocessing:latest
-    container_name: preprocessing
+    image: spark-with-scala3/streaming-generator:latest
+    container_name: streaming-generator
+    depends_on:
+      kafka:
+        condition: service_healthy
     volumes:
       - ./data:/app/data
     environment:
       - ENV=local
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9093
     networks:
-      - spark-network
+      - streaming-network
+    restart: on-failure
 
-  # ETL service (Scala 2.13 + Spark)
+  # Flink JobManager
+  flink-jobmanager:
+    image: flink:1.18.1-scala_2.12-java11
+    container_name: flink-jobmanager
+    ports:
+      - "8081:8081"  # Flink Web UI
+    command: jobmanager
+    environment:
+      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
+    networks:
+      - streaming-network
+    volumes:
+      - flink-checkpoints:/tmp/flink-checkpoints
+      - ./data:/app/data
+
+  # Flink TaskManager
+  flink-taskmanager:
+    image: flink:1.18.1-scala_2.12-java11
+    container_name: flink-taskmanager
+    depends_on:
+      - flink-jobmanager
+    command: taskmanager
+    environment:
+      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+    networks:
+      - streaming-network
+    volumes:
+      - flink-checkpoints:/tmp/flink-checkpoints
+      - ./data:/app/data
+
+  # Flink Streaming Job (our custom job)
+  flink-streaming:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: flink-streaming
+      target: flink-streaming
+    image: spark-with-scala3/flink-streaming:latest
+    container_name: flink-streaming
+    depends_on:
+      kafka:
+        condition: service_healthy
+      flink-jobmanager:
+        condition: service_started
+    volumes:
+      - ./data:/app/data
+      - ./flink-streaming/target/scala-2.12:/app/jars
+    environment:
+      - ENV=local
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9093
+    networks:
+      - streaming-network
+    # Note: Job will be submitted to JobManager rather than run standalone
+    # For now, this container is just for building - we'll submit manually
+    command: sleep infinity
+
+  # ETL service (Scala 2.12 + Spark)
   etl:
     build:
       context: .
@@ -36,10 +169,14 @@ services:
     ports:
       - "4040:4040"  # Spark UI
     networks:
-      - spark-network
-    depends_on:
-      - preprocessing
+      - streaming-network
+    # ETL runs on demand, not automatically
+    command: sleep infinity
 
 networks:
-  spark-network:
+  streaming-network:
     driver: bridge
+
+volumes:
+  kafka-data:
+  flink-checkpoints:

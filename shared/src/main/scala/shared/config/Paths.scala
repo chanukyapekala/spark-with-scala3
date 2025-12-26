@@ -7,12 +7,14 @@ package shared.config
 object Paths {
   // Local development paths
   val LOCAL_RAW_DATA = "data/raw/"
-  val LOCAL_PROCESSED_DATA = "data/processed/"
+  val LOCAL_STREAMING_DATA = "data/streaming/"  // Flink writes here
+  val LOCAL_PROCESSED_DATA = "data/processed/"  // Legacy batch preprocessing
   val LOCAL_OUTPUT_DATA = "data/output/"
 
   // S3/HDFS paths for production
   val S3_BUCKET = sys.env.getOrElse("S3_BUCKET", "s3://spark-with-scala3")
   val S3_RAW_DATA = s"$S3_BUCKET/raw/"
+  val S3_STREAMING_DATA = s"$S3_BUCKET/streaming/"
   val S3_PROCESSED_DATA = s"$S3_BUCKET/processed/"
   val S3_OUTPUT_DATA = s"$S3_BUCKET/output/"
 
@@ -20,6 +22,7 @@ object Paths {
   def isLocal: Boolean = sys.env.getOrElse("ENV", "local") == "local"
 
   def rawData: String = if (isLocal) LOCAL_RAW_DATA else S3_RAW_DATA
+  def streamingData: String = if (isLocal) LOCAL_STREAMING_DATA else S3_STREAMING_DATA
   def processedData: String = if (isLocal) LOCAL_PROCESSED_DATA else S3_PROCESSED_DATA
   def outputData: String = if (isLocal) LOCAL_OUTPUT_DATA else S3_OUTPUT_DATA
 
@@ -28,7 +31,8 @@ object Paths {
     def rawJson: String = s"${rawData}people.json"
     def rawJsonLines: String = s"${rawData}people.jsonl"
     def rawCsv: String = s"${rawData}people.csv"
-    def processedParquet: String = s"${processedData}people.parquet"
+    def streamingParquet: String = s"${streamingData}people"  // Flink writes partitioned here
+    def processedParquet: String = s"${processedData}people.parquet"  // Legacy
     def outputStats: String = s"${outputData}people_stats.parquet"
   }
 }

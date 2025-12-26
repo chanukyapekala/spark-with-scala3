@@ -1,8 +1,9 @@
 # Multi-Module Dockerfile for spark-with-scala3
-# Builds either preprocessing or etl module based on MODULE build arg
+# Builds preprocessing, flink-streaming, or etl module based on MODULE build arg
 #
 # Usage:
 #   docker build --build-arg MODULE=preprocessing -t preprocessing:latest .
+#   docker build --build-arg MODULE=flink-streaming -t flink-streaming:latest .
 #   docker build --build-arg MODULE=etl -t etl:latest .
 
 # =============================================================================
@@ -25,6 +26,7 @@ COPY build.sbt .
 COPY project/ project/
 COPY shared/ shared/
 COPY preprocessing/ preprocessing/
+COPY flink-streaming/ flink-streaming/
 COPY etl/ etl/
 
 # Build argument to select which module to build
@@ -37,6 +39,8 @@ RUN sbt "${MODULE}/assembly"
 # Move the assembly JAR to a predictable location
 RUN if [ "$MODULE" = "preprocessing" ]; then \
       cp preprocessing/target/scala-3.5.2/preprocessing-assembly.jar /app/app.jar; \
+    elif [ "$MODULE" = "flink-streaming" ]; then \
+      cp flink-streaming/target/scala-3.5.2/flink-streaming-assembly.jar /app/app.jar; \
     else \
       cp etl/target/scala-2.13/etl-assembly.jar /app/app.jar; \
     fi
@@ -56,12 +60,13 @@ ENV MODULE=${MODULE}
 COPY --from=builder /app/app.jar /app/app.jar
 
 # Create data directories
-RUN mkdir -p /app/data/raw /app/data/processed /app/data/output
+RUN mkdir -p /app/data/raw /app/data/streaming /app/data/processed /app/data/output
 
 # Set the main class based on module
-ENV MAIN_CLASS=${MODULE}.PreprocessingPipeline
 RUN if [ "$MODULE" = "etl" ]; then \
       echo "etl.SparkETLPipeline" > /tmp/mainclass; \
+    elif [ "$MODULE" = "flink-streaming" ]; then \
+      echo "flink.StreamingJob" > /tmp/mainclass; \
     else \
       echo "preprocessing.PreprocessingPipeline" > /tmp/mainclass; \
     fi
@@ -76,6 +81,7 @@ LABEL org.opencontainers.image.version="0.1.0"
 
 # Default command - run the assembly JAR
 # For preprocessing: runs PreprocessingPipeline
+# For flink-streaming: runs StreamingJob
 # For etl: runs SparkETLPipeline
 CMD java -jar /app/app.jar
 
@@ -87,6 +93,11 @@ CMD java -jar /app/app.jar
 FROM runtime as preprocessing
 ENV MODULE=preprocessing
 LABEL module="preprocessing"
+
+# Flink Streaming target
+FROM runtime as flink-streaming
+ENV MODULE=flink-streaming
+LABEL module="flink-streaming"
 
 # ETL target
 FROM runtime as etl

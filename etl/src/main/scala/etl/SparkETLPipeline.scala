@@ -10,13 +10,13 @@ import org.apache.logging.log4j.LogManager
 /**
  * ETL Pipeline using Spark (Scala 2.13)
  *
- * This module reads the Parquet files created by the preprocessing module
- * and performs Spark operations (aggregations, joins, etc.)
+ * This module reads Parquet files from the data lake (written by Flink)
+ * and performs batch analytics (aggregations, joins, etc.)
  *
  * Key points:
- * - Uses Scala 2.13 (full Spark compatibility)
+ * - Uses Scala 2.13 (full Spark compatibility + better forward-compatibility)
+ * - Depends on shared module (Scala 2.13) for schemas and paths
  * - All aggregations work perfectly
- * - No varargs issues
  * - Can deploy to Databricks/EMR
  */
 object SparkETLPipeline {
@@ -32,13 +32,15 @@ object SparkETLPipeline {
       .appName("Spark-with-Scala3-ETL")
       .master("local[*]")
       .config("spark.sql.adaptive.enabled", "true")
+      .config("spark.sql.parquet.mergeSchema", "true") // Handle schema evolution
       .getOrCreate()
 
     try {
-      // Read processed Parquet from preprocessing module
-      val inputPath = Paths.People.processedParquet
+      // Read Parquet from data lake (written by Flink)
+      val inputPath = Paths.People.streamingParquet
       logger.info(s"Reading Parquet from: $inputPath")
 
+      // Spark will infer the schema from Parquet files
       val df = spark.read.parquet(inputPath)
 
       logger.info(s"Loaded ${df.count()} records")
