@@ -8,7 +8,7 @@ package shared.schemas
  * - Scala 3 can read Scala 2.13 bytecode ✓
  * - Scala 2.13 can read Scala 2.13 bytecode ✓
  */
-object I PersonSchema {
+  object PersonSchema {
 
   /**
    * Field names as constants
