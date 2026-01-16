@@ -101,7 +101,7 @@ services:
       - "8081:8081"  # Flink Web UI
     command: jobmanager
     environment:
-      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
+      FLINK_PROPERTIES: jobmanager.rpc.address:flink-jobmanager
     networks:
       - streaming-network
     volumes:
@@ -116,8 +116,7 @@ services:
       - flink-jobmanager
     command: taskmanager
     environment:
-      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
-        taskmanager.numberOfTaskSlots: 2
+      FLINK_PROPERTIES: jobmanager.rpc.address:flink-jobmanager
     networks:
       - streaming-network
     volumes:

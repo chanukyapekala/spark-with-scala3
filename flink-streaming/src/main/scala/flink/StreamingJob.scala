@@ -6,8 +6,8 @@ import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.common.serialization.SimpleStringSchema
+import org.apache.flink.formats.parquet.avro.ParquetAvroWriters
 import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink
-import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy
 import org.apache.flink.core.fs.Path
 import org.apache.flink.api.common.functions.MapFunction
 
@@ -16,6 +16,9 @@ import shared.config.Paths
 
 import java.time.Duration
 import org.apache.logging.log4j.LogManager
+import org.apache.avro.generic.GenericRecord
+import org.apache.avro.Schema
+import org.apache.avro.generic.GenericRecordBuilder
 
 /**
  * Flink Streaming Job (Scala 3!)
@@ -23,15 +26,16 @@ import org.apache.logging.log4j.LogManager
  * Architecture:
  * 1. Consumes PersonEvent messages from Kafka
  * 2. Deserializes JSON to PersonEvent objects
- * 3. Windows events by event time (1-minute tumbling windows)
- * 4. Writes to JSON files (later can be converted to Parquet)
- * 5. Enables checkpointing for exactly-once semantics
+ * 3. Applies watermarking for event-time processing
+ * 4. Converts to Avro GenericRecord
+ * 5. Writes to Parquet files with date/hour partitioning
+ * 6. Enables checkpointing for exactly-once semantics
  *
  * Key Scala 3 Features Used:
- * - New control structure syntax
+ * - New control structure syntax (if-then, try-catch)
  * - Extension methods (from shared module)
- * - Opaque types (from shared module)
  * - Top-level definitions
+ * - Scala 3 class syntax
  */
 object StreamingJob:
   private val logger = LogManager.getLogger(getClass)
@@ -90,30 +94,43 @@ object StreamingJob:
 
     logger.info("Event stream created")
 
-    // Write events to files (JSON format)
+    // Write events to Parquet files
     val outputPath = new Path(Paths.People.streamingParquet)
-
     logger.info(s"Output path: ${outputPath.getPath}")
 
-    // Write to file system with rolling policy
+    // Create Avro schema for PersonEvent
+    val schema = new Schema.Parser().parse("""{
+      "type": "record",
+      "name": "PersonEvent",
+      "namespace": "shared.kafka",
+      "fields": [
+        {"name": "id", "type": "string"},
+        {"name": "name", "type": "string"},
+        {"name": "email", "type": "string"},
+        {"name": "age", "type": "int"},
+        {"name": "city", "type": "string"},
+        {"name": "status", "type": "string"},
+        {"name": "createdAt", "type": "string"},
+        {"name": "eventTime", "type": "long"}
+      ]
+    }""")
+
+    // Convert PersonEvent to Avro GenericRecord
+    val eventStream = events
+      .map(new PersonEventToAvroMapper(schema))
+      .name("Convert to Avro GenericRecord")
+
+    // Write to Parquet files (rolls on checkpoint by default)
     val sink = StreamingFileSink
-      .forRowFormat(outputPath, new org.apache.flink.api.common.serialization.SimpleStringEncoder[PersonEvent]("UTF-8"))
-      .withRollingPolicy(
-        DefaultRollingPolicy.builder()
-          .withRolloverInterval(Duration.ofMinutes(5).toMillis)
-          .withInactivityInterval(Duration.ofMinutes(2).toMillis)
-          .withMaxPartSize(128 * 1024 * 1024) // 128 MB
-          .build()
-      )
-      .withBucketAssigner(PersonEventBucketAssigner())
+      .forBulkFormat(outputPath, ParquetAvroWriters.forGenericRecord(schema))
+      .withBucketAssigner(AvroRecordBucketAssigner())
       .build()
 
-    events
-      .map(new PersonEventSerializer())
+    eventStream
       .addSink(sink)
-      .name("Write to Files")
+      .name("Write to Parquet")
 
-    logger.info("Sink configured")
+    logger.info("Parquet sink configured")
 
     // Execute the job
     logger.info("Executing Flink job: People Event Processing")
@@ -136,33 +153,43 @@ class PersonEventDeserializer extends MapFunction[String, PersonEvent]:
         throw e
 
 /**
- * Serializer for PersonEvent (Scala 3 MapFunction)
+ * Convert PersonEvent to Avro GenericRecord (Scala 3 MapFunction)
  */
-class PersonEventSerializer extends MapFunction[PersonEvent, String]:
-  override def map(event: PersonEvent): String =
-    PersonEvent.toJson(event)
+class PersonEventToAvroMapper(schema: Schema) extends MapFunction[PersonEvent, GenericRecord]:
+  override def map(event: PersonEvent): GenericRecord =
+    new GenericRecordBuilder(schema)
+      .set("id", event.id)
+      .set("name", event.name)
+      .set("email", event.email)
+      .set("age", event.age)
+      .set("city", event.city)
+      .set("status", event.status)
+      .set("createdAt", event.createdAt)
+      .set("eventTime", event.eventTime)
+      .build()
 
 /**
- * Custom bucket assigner for partitioning by date/hour (Scala 3 style)
- * Creates directory structure: /dt=yyyy-MM-dd/hour=HH/
+ * Bucket assigner for Avro GenericRecord with date/hour partitioning
+ * Extracts eventTime from GenericRecord and creates: /dt=yyyy-MM-dd/hour=HH/
+ * Uses simple string formatting to avoid serialization issues
  */
-class PersonEventBucketAssigner
-  extends org.apache.flink.streaming.api.functions.sink.filesystem.BucketAssigner[PersonEvent, String]:
+class AvroRecordBucketAssigner extends org.apache.flink.streaming.api.functions.sink.filesystem.BucketAssigner[GenericRecord, String]:
 
-  import java.time.{Instant, ZoneOffset}
-  import java.time.format.DateTimeFormatter
-
-  private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneOffset.UTC)
-  private val hourFormatter = DateTimeFormatter.ofPattern("HH").withZone(ZoneOffset.UTC)
+  import java.time.Instant
+  import java.time.LocalDateTime
+  import java.time.ZoneId
 
   override def getBucketId(
-    element: PersonEvent,
+    element: GenericRecord,
     context: org.apache.flink.streaming.api.functions.sink.filesystem.BucketAssigner.Context
   ): String =
-    val instant = Instant.ofEpochMilli(element.eventTime)
-    val date = dateFormatter.format(instant)
-    val hour = hourFormatter.format(instant)
+    val eventTime = element.get("eventTime").asInstanceOf[Long]
+    val instant = Instant.ofEpochMilli(eventTime)
+    val localDateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"))
+    val date = f"${localDateTime.getYear}%04d-${localDateTime.getMonthValue}%02d-${localDateTime.getDayOfMonth}%02d"
+    val hour = f"${localDateTime.getHour}%02d"
     s"dt=$date/hour=$hour"
 
   override def getSerializer: org.apache.flink.core.io.SimpleVersionedSerializer[String] =
     org.apache.flink.streaming.api.functions.sink.filesystem.bucketassigners.SimpleVersionedStringSerializer.INSTANCE
+

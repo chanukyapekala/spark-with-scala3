@@ -1,6 +1,7 @@
 // Multi-Module Build: Scala 3 Streaming Generator + Scala 2.12 Flink + Spark
 // - Scala 3.5.2: streaming-generator (Kafka publisher with modern Scala features)
 // - Scala 2.12: shared, flink-streaming, etl (maximum compatibility)
+// - Scala 3.5.2: orchestrator (ZIO-based pipeline orchestration)
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "com.example"
@@ -9,7 +10,7 @@ ThisBuild / organization := "com.example"
 // Root Project (Aggregates all modules)
 // ============================================
 lazy val root = (project in file("."))
-  .aggregate(shared, preprocessing, flinkStreaming, etl)
+  .aggregate(shared, preprocessing, flinkStreaming, etl, orchestrator)
   .settings(
     name := "spark-with-scala3",
     // Don't compile root, just aggregate
@@ -39,7 +40,6 @@ lazy val shared = (project in file("shared"))
 
       // JSON (for Kafka message serialization)
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.3",
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.15.3",
 
       // Hadoop client for HDFS/S3 paths (Provided - available in runtime)
       "org.apache.hadoop" % "hadoop-client" % "3.3.4" % Provided,
@@ -214,7 +214,6 @@ lazy val flinkStreaming = (project in file("flink-streaming"))
 
       // Jackson for JSON (de)serialization
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.3",
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.2",
 
       // Logging
       "org.apache.logging.log4j" % "log4j-api" % "2.20.0",
@@ -249,6 +248,47 @@ lazy val flinkStreaming = (project in file("flink-streaming"))
     // Java options for Flink
     javaOptions ++= Seq(
       "--add-opens=java.base/java.util=ALL-UNNAMED"
+    ),
+
+    // Fork JVM for running
+    fork := true
+  )
+  .dependsOn(shared)  // Depends on Scala 2.13 shared module (Scala 3 can read 2.13)
+
+// ============================================
+// Orchestrator Module (Scala 3.5.2)
+// - ZIO-based pipeline orchestration
+// - Pure functional orchestration without Docker
+// - Orchestrates: Kafka publish → Flink submit → ETL run
+// ============================================
+lazy val orchestrator = (project in file("orchestrator"))
+  .settings(
+    name := "orchestrator",
+    scalaVersion := "3.5.2",
+
+    libraryDependencies ++= Seq(
+      // ZIO for pure functional orchestration
+      "dev.zio" %% "zio" % "2.0.20",
+
+      // JSON for HTTP responses (minimal)
+      "io.circe" %% "circe-core" % "0.14.6",
+      "io.circe" %% "circe-generic" % "0.14.6",
+      "io.circe" %% "circe-parser" % "0.14.6",
+
+      // Logging
+      "org.apache.logging.log4j" % "log4j-api" % "2.20.0",
+      "org.apache.logging.log4j" % "log4j-core" % "2.20.0",
+      "org.apache.logging.log4j" % "log4j-slf4j2-impl" % "2.20.0",
+
+      // Testing
+      "org.scalameta" %% "munit" % "1.0.0" % Test
+    ),
+
+    // Scala 3 compiler options
+    scalacOptions ++= Seq(
+      "-deprecation",
+      "-feature",
+      "-unchecked"
     ),
 
     // Fork JVM for running

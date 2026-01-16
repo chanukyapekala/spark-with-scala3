@@ -88,6 +88,33 @@ object PreprocessingPipeline extends IOApp.Simple:
   logger.info("Next step: Run preprocessing pipeline")
   logger.info("  sbt \"preprocessing/run\"")
 
+@main def publishTestDataToKafka(count: Int = 100): Unit =
+  val logger = LogManager.getLogger("KafkaPublisher")
+
+  logger.info("=" * 60)
+  logger.info("Publishing Test Data to Kafka")
+  logger.info("=" * 60)
+
+  val people = KafkaPublisher.generateTestPeople(count)
+  logger.info(s"Generated $count test Person records")
+
+  // Use cats.effect to run the IO
+  import cats.effect.unsafe.implicits.global
+  val (success, failures) = KafkaPublisher.publishEvents(people).unsafeRunSync()
+
+  logger.info("=" * 60)
+  logger.info(s"Published to Kafka topic '${shared.kafka.KafkaConfig.PEOPLE_TOPIC}'")
+  logger.info(s"  ✓ Success: $success")
+  logger.info(s"  ✗ Failures: $failures")
+  logger.info("=" * 60)
+
+  if success > 0 then
+    logger.info("")
+    logger.info("Next steps:")
+    logger.info("  1. Start Flink to consume and process events")
+    logger.info("  2. Check data lake: data/streaming/people/")
+    logger.info("  3. Run ETL for batch analytics")
+
 @main def demoScala3Features(): Unit =
   import preprocessing.models.*  // Import extension methods
 

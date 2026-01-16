@@ -2,7 +2,6 @@ package shared.kafka
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
 /**
  * Kafka message for Person events
@@ -23,11 +22,10 @@ case class PersonEvent(
 
 object PersonEvent {
   /**
-   * Jackson ObjectMapper configured for Scala
-   * Shared across serialization and deserialization
+   * Jackson ObjectMapper for JSON serialization
+   * Works with case classes without needing DefaultScalaModule
    */
   val objectMapper: ObjectMapper = new ObjectMapper()
-    .registerModule(DefaultScalaModule)
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
   /**
