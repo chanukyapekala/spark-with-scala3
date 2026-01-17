@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task DAG Visualization</title>
+    <style>
+        body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .dag { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .task { display: inline-block; margin: 10px; padding: 15px; background: #667eea; color: white; border-radius: 6px; min-width: 120px; text-align: center; }
+        .task.producer { background: #4CAF50; }
+        .task.processor { background: #2196F3; }
+        .task.sensor { background: #FF9800; }
+        .task.analyzer { background: #9C27B0; }
+        .arrow { display: inline-block; margin: 0 10px; color: #667eea; font-weight: bold; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #667eea; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Task DAG Visualization</h1>
+        <div class="dag">
+            <h2>Execution Flow</h2>
+            <div style="overflow-x: auto;">
+                <span class='task producer'>publish_to_kafka</span><span class='arrow'>→</span>
+                <span class='task processor'>submit_flink_job</span><span class='arrow'>→</span>
+                <span class='task sensor'>wait_for_parquet</span><span class='arrow'>→</span>
+                <span class='task analyzer'>run_spark_etl</span>
+            </div>
+        </div>
+
+        <h2>Task Details</h2>
+        <table>
+            <tr>
+                <th>Task ID</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Dependencies</th>
+                <th>Duration</th>
+            </tr>
+            <tr>
+                <td>publish_to_kafka</td>
+                <td>Generate and publish events to Kafka</td>
+                <td>Producer</td>
+                <td>None</td>
+                <td>~8s</td>
+            </tr>
+            <tr>
+                <td>submit_flink_job</td>
+                <td>Build and submit Flink streaming job</td>
+                <td>Processor</td>
+                <td>publish_to_kafka</td>
+                <td>~33s</td>
+            </tr>
+            <tr>
+                <td>wait_for_parquet</td>
+                <td>Wait for Parquet files to appear in data lake</td>
+                <td>Sensor</td>
+                <td>submit_flink_job</td>
+                <td>~30s</td>
+            </tr>
+            <tr>
+                <td>run_spark_etl</td>
+                <td>Run Spark batch ETL analytics</td>
+                <td>Analyzer</td>
+                <td>wait_for_parquet</td>
+                <td>~55s</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
