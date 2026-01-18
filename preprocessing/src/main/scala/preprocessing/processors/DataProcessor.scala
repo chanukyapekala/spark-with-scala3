@@ -63,9 +63,6 @@ class ProcessingPipeline[A](using processor: DataProcessor[A]):
           .map(processor.transform)
       }
 
-  def filterValid(results: Stream[IO, Either[String, A]]): Stream[IO, A] =
-    results.collect { case Right(item) => item }
-
   def logErrors(results: Stream[IO, Either[String, A]]): Stream[IO, A] =
     results.evalTap {
       case Left(error) => IO(logger.error(s"Processing error: $error"))

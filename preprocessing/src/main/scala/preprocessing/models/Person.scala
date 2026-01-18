@@ -208,14 +208,6 @@ extension (p: Person)
 // FEATURE #6: TOP-LEVEL DEFINITIONS
 // ============================================
 
-// No need for singleton objects!
-def validatePeople(people: Seq[Person]): (Seq[Person], Seq[String]) =
-  val valid = people.filter(_.isActive)
-  val errors = people
-    .filterNot(_.isActive)
-    .map(p => s"${p.name} is not active: ${p.status}")
-  (valid, errors)
-
 def categorize(person: Person): String = person match
   case p if p.age.isMinor => "Minor"
   case p if p.isAdult && p.status == PersonStatus.Active => "Active Adult"

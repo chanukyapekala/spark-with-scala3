@@ -7,15 +7,15 @@ package shared.config
 object Paths {
   // Local development paths
   val LOCAL_RAW_DATA = "data/raw/"
-  val LOCAL_STREAMING_DATA = "data/streaming/"  // Flink writes here
-  val LOCAL_PROCESSED_DATA = "data/processed/"  // Legacy batch preprocessing
+  val LOCAL_STREAMING_DATA = "data/streaming/"  // Flink writes partitioned data here
+  val LOCAL_PROCESSED_DATA = "data/processed/"  // DEPRECATED: Legacy batch preprocessing (not used in pipeline)
   val LOCAL_OUTPUT_DATA = "data/output/"
 
   // S3/HDFS paths for production
   val S3_BUCKET = sys.env.getOrElse("S3_BUCKET", "s3://spark-with-scala3")
   val S3_RAW_DATA = s"$S3_BUCKET/raw/"
   val S3_STREAMING_DATA = s"$S3_BUCKET/streaming/"
-  val S3_PROCESSED_DATA = s"$S3_BUCKET/processed/"
+  val S3_PROCESSED_DATA = s"$S3_BUCKET/processed/"  // DEPRECATED: Not used in current pipeline
   val S3_OUTPUT_DATA = s"$S3_BUCKET/output/"
 
   // Get paths based on environment
@@ -31,8 +31,9 @@ object Paths {
     def rawJson: String = s"${rawData}people.json"
     def rawJsonLines: String = s"${rawData}people.jsonl"
     def rawCsv: String = s"${rawData}people.csv"
-    def streamingParquet: String = s"${streamingData}people"  // Flink writes partitioned here
-    def processedParquet: String = s"${processedData}people.parquet"  // Legacy
-    def outputStats: String = s"${outputData}people_stats.parquet"
+    def streamingParquet: String = s"${streamingData}people"  // Flink writes partitioned data here (dt=YYYY-MM-DD/hour=HH)
+    @deprecated("Use streamingParquet instead", since = "1.0")
+    def processedParquet: String = s"${processedData}people.parquet"
+    def outputStats: String = s"${outputData}people_stats.parquet"  // Spark ETL writes analytics results here
   }
 }
