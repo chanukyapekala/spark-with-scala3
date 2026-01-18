@@ -262,7 +262,11 @@ object InteractiveOrchestrator:
       |                    </div>
       |                </div>
       |                <div class="detail-section">
-      |                    <div class="detail-label">📊 Task Data</div>
+      |                    <div class="detail-label">📋 Sample Data (spark.show)</div>
+      |                    <div class="sample-data-container" id="modalSampleData" style="background: #f9f9f9; padding: 12px; border-radius: 8px; font-size: 0.8em; overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-family: monospace;"><tbody></tbody></table></div>
+      |                </div>
+      |                <div class="detail-section">
+      |                    <div class="detail-label">📊 Task Metadata</div>
       |                    <div class="task-data-container" id="modalTaskData" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f9f9f9; padding: 15px; border-radius: 8px; font-size: 0.9em;"></div>
       |                </div>
       |                <div class="detail-section">
@@ -471,11 +475,39 @@ object InteractiveOrchestrator:
       |            document.getElementById('modalRecords').textContent = metrics?.recordsProcessed || '-';
       |            document.getElementById('modalErrors').textContent = metrics?.recordsFailed || '0';
       |
+      |            // Display sample data as table
+      |            if (metrics?.sampleData && metrics.sampleData.length > 0) {
+      |                let columns = [];
+      |                metrics.sampleData.forEach(row => {
+      |                    Object.keys(row).forEach(col => {
+      |                        if (!columns.includes(col)) columns.push(col);
+      |                    });
+      |                });
+      |
+      |                let tableHtml = '<table style="width: 100%; border-collapse: collapse; font-family: monospace;"><thead><tr style="background: #f0f0f0; border-bottom: 2px solid #ddd;">';
+      |                columns.forEach(col => {
+      |                    tableHtml += `<th style="padding: 8px; text-align: left; font-weight: bold; color: #333; border-right: 1px solid #ddd;">${col}</th>`;
+      |                });
+      |                tableHtml += '</tr></thead><tbody>';
+      |
+      |                metrics.sampleData.forEach((row, idx) => {
+      |                    tableHtml += `<tr style="border-bottom: 1px solid #eee; ${idx % 2 === 0 ? 'background: #fafafa;' : ''}">`;
+      |                    columns.forEach(col => {
+      |                        tableHtml += `<td style="padding: 8px; border-right: 1px solid #eee; color: #555;">${row[col] || '-'}</td>`;
+      |                    });
+      |                    tableHtml += '</tr>';
+      |                });
+      |                tableHtml += '</tbody></table>';
+      |                document.querySelector('#modalSampleData table tbody').parentElement.innerHTML = tableHtml;
+      |            } else {
+      |                document.querySelector('#modalSampleData table tbody').parentElement.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">No sample data available</div>';
+      |            }
+      |
       |            // Display task data
       |            const taskDataHtml = Object.entries(metrics?.taskData || {}).map(([key, value]) => {
       |                return `<div style="border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;"><strong>${key}:</strong> <span style="color: #555;">${value}</span></div>`;
       |            }).join('');
-      |            document.getElementById('modalTaskData').innerHTML = taskDataHtml || '<div style="color: #999; text-align: center; padding: 20px;">No task data available</div>';
+      |            document.getElementById('modalTaskData').innerHTML = taskDataHtml || '<div style="color: #999; text-align: center; padding: 20px;">No task metadata available</div>';
       |
       |            const logsHtml = (metrics?.logs || []).map(log => {
       |                const levelClass = `log-${log.level.toLowerCase()}`;
@@ -502,11 +534,39 @@ object InteractiveOrchestrator:
       |                document.getElementById('modalRecords').textContent = metrics.recordsProcessed || '-';
       |                document.getElementById('modalErrors').textContent = metrics.recordsFailed || '0';
       |
+      |                // Update sample data as table
+      |                if (metrics?.sampleData && metrics.sampleData.length > 0) {
+      |                    let columns = [];
+      |                    metrics.sampleData.forEach(row => {
+      |                        Object.keys(row).forEach(col => {
+      |                            if (!columns.includes(col)) columns.push(col);
+      |                        });
+      |                    });
+      |
+      |                    let tableHtml = '<table style="width: 100%; border-collapse: collapse; font-family: monospace;"><thead><tr style="background: #f0f0f0; border-bottom: 2px solid #ddd;">';
+      |                    columns.forEach(col => {
+      |                        tableHtml += `<th style="padding: 8px; text-align: left; font-weight: bold; color: #333; border-right: 1px solid #ddd;">${col}</th>`;
+      |                    });
+      |                    tableHtml += '</tr></thead><tbody>';
+      |
+      |                    metrics.sampleData.forEach((row, idx) => {
+      |                        tableHtml += `<tr style="border-bottom: 1px solid #eee; ${idx % 2 === 0 ? 'background: #fafafa;' : ''}">`;
+      |                        columns.forEach(col => {
+      |                            tableHtml += `<td style="padding: 8px; border-right: 1px solid #eee; color: #555;">${row[col] || '-'}</td>`;
+      |                        });
+      |                        tableHtml += '</tr>';
+      |                    });
+      |                    tableHtml += '</tbody></table>';
+      |                    document.querySelector('#modalSampleData table tbody').parentElement.innerHTML = tableHtml;
+      |                } else {
+      |                    document.querySelector('#modalSampleData table tbody').parentElement.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">No sample data available</div>';
+      |                }
+      |
       |                // Update task data
       |                const taskDataHtml = Object.entries(metrics?.taskData || {}).map(([key, value]) => {
       |                    return `<div style="border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;"><strong>${key}:</strong> <span style="color: #555;">${value}</span></div>`;
       |                }).join('');
-      |                document.getElementById('modalTaskData').innerHTML = taskDataHtml || '<div style="color: #999; text-align: center; padding: 20px;">No task data available</div>';
+      |                document.getElementById('modalTaskData').innerHTML = taskDataHtml || '<div style="color: #999; text-align: center; padding: 20px;">No task metadata available</div>';
       |
       |                const logsHtml = (metrics.logs || []).map(log => {
       |                    const levelClass = `log-${log.level.toLowerCase()}`;

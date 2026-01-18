@@ -25,11 +25,18 @@ object TaskExecutionTracker:
     recordsFailed: Long = 0,
     logs: List[ExecutionLog] = List(),
     error: Option[String] = None,
-    taskData: Map[String, String] = Map()  // Task-specific output data
+    taskData: Map[String, String] = Map(),  // Task-specific output data
+    sampleData: List[Map[String, String]] = List()  // Sample data records
   ):
     def toJson: String =
       val taskDataJson = taskData.map { case (k, v) =>
         s""""$k":"${v.replace("\"", "\\\"")}""""
+      }.mkString(",")
+      val sampleDataJson = sampleData.map { row =>
+        val rowJson = row.map { case (k, v) =>
+          s""""$k":"${v.replace("\"", "\\\"")}""""
+        }.mkString(",")
+        s"""{$rowJson}"""
       }.mkString(",")
       s"""{
          |  "taskId": "$taskId",
@@ -43,6 +50,7 @@ object TaskExecutionTracker:
            s"""{"timestamp":"${l.timestamp}","message":"${l.message}","level":"${l.level}"}"""
          ).mkString(",")}],
          |  "taskData": {$taskDataJson},
+         |  "sampleData": [$sampleDataJson],
          |  "error": ${error.map(e => s""""$e"""").getOrElse("null")}
          |}""".stripMargin
 
@@ -94,6 +102,13 @@ object TaskExecutionTracker:
     executions.get(taskId).foreach { metrics =>
       executions(taskId) = metrics.copy(
         taskData = metrics.taskData ++ data
+      )
+    }
+
+  def addSampleData(taskId: String, rows: List[Map[String, String]]): Unit =
+    executions.get(taskId).foreach { metrics =>
+      executions(taskId) = metrics.copy(
+        sampleData = rows
       )
     }
 
