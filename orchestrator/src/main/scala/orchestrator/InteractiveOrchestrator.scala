@@ -428,41 +428,29 @@ object InteractiveOrchestrator:
       |        }
       |
       |        async function runEntireWorkflow() {
-      |            if (confirm('Run entire workflow with all tasks in dependency order?')) {
-      |                document.getElementById('workflowStatus').innerHTML = '<div style="padding: 20px; text-align: center; color: #2196F3;"><b>⏳ Workflow executing...</b></div>';
-      |                document.getElementById('workflowModal').classList.add('active');
+      |            if (confirm('Run all tasks in dependency order?')) {
+      |                const tasks = await fetchTasks();
+      |                let taskIndex = 0;
       |
-      |                try {
-      |                    const response = await fetch('/api/workflow/start', { method: 'POST' });
-      |                    if (response.ok) {
-      |                        // Poll workflow status
-      |                        let interval = setInterval(async () => {
-      |                            const statusResp = await fetch('/api/workflow/status');
-      |                            const status = await statusResp.json();
-      |                            updateWorkflowStatus(status);
-      |
-      |                            const isRunning = status.some(t => t.status === 'RUNNING' || t.status === 'QUEUED');
-      |                            if (!isRunning) {
-      |                                clearInterval(interval);
-      |                            }
-      |                        }, 1000);
+      |                const executeNextTask = async () => {
+      |                    if (taskIndex >= tasks.length) {
+      |                        document.getElementById('workflowStatus').innerHTML = '<div style="padding: 20px; text-align: center; color: #4CAF50;"><b>✅ Workflow complete!</b></div>';
+      |                        return;
       |                    }
-      |                } catch (e) {
-      |                    console.error('Error starting workflow:', e);
-      |                }
+      |                    const task = tasks[taskIndex];
+      |                    document.getElementById('workflowStatus').innerHTML = `<div style="padding: 20px; text-align: center;"><b>Running ${taskIndex + 1}/${tasks.length}: ${task.id}</b></div>`;
+      |                    try {
+      |                        await fetch(`/api/execute/${task.id}`, { method: 'POST' });
+      |                        await new Promise(r => setTimeout(r, 2000));
+      |                        taskIndex++;
+      |                        executeNextTask();
+      |                    } catch (e) {
+      |                        console.error('Error running task:', e);
+      |                    }
+      |                };
+      |                document.getElementById('workflowModal').classList.add('active');
+      |                executeNextTask();
       |            }
-      |        }
-      |
-      |        function updateWorkflowStatus(status) {
-      |            let html = '<div style="padding: 20px;">';
-      |            status.forEach((task, idx) => {
-      |                const icon = task.status === 'COMPLETED' ? '✅' : task.status === 'RUNNING' ? '⏳' : task.status === 'FAILED' ? '❌' : '⭕';
-      |                html += `<div style="padding: 10px; margin: 5px 0; background: #f5f5f5; border-radius: 4px;">
-      |                    <b>${idx + 1}. ${task.taskId}</b> ${icon} <span style="color: #999; font-size: 0.9em;">${task.status}</span>
-      |                </div>`;
-      |            });
-      |            html += '</div>';
-      |            document.getElementById('workflowStatus').innerHTML = html;
       |        }
       |
       |        async function openModal(taskId) {
@@ -725,41 +713,6 @@ object InteractiveOrchestrator:
           else
             exchange.sendResponseHeaders(405, 0)
             exchange.close()
-      })
-
-      // API: Workflow start
-      server.createContext("/api/workflow/start", new HttpHandler {
-        override def handle(exchange: HttpExchange): Unit =
-          if exchange.getRequestMethod == "POST" then
-            try
-              WorkflowExecutor.startWorkflow
-              val response = """{"status":"started"}""".getBytes(StandardCharsets.UTF_8)
-              exchange.getResponseHeaders.set("Content-Type", "application/json")
-              exchange.sendResponseHeaders(200, response.length)
-              exchange.getResponseBody.write(response)
-            catch
-              case e: Exception =>
-                val error = s"""{"error":"${e.getMessage}"}"""
-                val response = error.getBytes(StandardCharsets.UTF_8)
-                exchange.getResponseHeaders.set("Content-Type", "application/json")
-                exchange.sendResponseHeaders(500, response.length)
-                exchange.getResponseBody.write(response)
-            finally
-              exchange.close()
-          else
-            exchange.sendResponseHeaders(405, 0)
-            exchange.close()
-      })
-
-      // API: Workflow status
-      server.createContext("/api/workflow/status", new HttpHandler {
-        override def handle(exchange: HttpExchange): Unit =
-          val json = WorkflowExecutor.getWorkflowStatus
-          val response = json.getBytes(StandardCharsets.UTF_8)
-          exchange.getResponseHeaders.set("Content-Type", "application/json")
-          exchange.sendResponseHeaders(200, response.length)
-          exchange.getResponseBody.write(response)
-          exchange.close()
       })
 
       server.setExecutor(null)
