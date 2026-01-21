@@ -52,10 +52,46 @@ A production-ready example demonstrating how to use Scala 3 features alongside A
 - sbt 1.10+
 - Docker & Docker Compose (optional, for infrastructure)
 
-### Option 1: Docker Compose (Recommended)
+### Automated Setup (Recommended)
 
 ```bash
-# Start Kafka & Flink infrastructure
+# 1. Run setup script (checks Java, sbt, optionally starts Kafka)
+./setup.sh
+
+# 2. Choose your path...
+```
+
+### Option 1: Interactive Dashboard (5 minutes)
+
+```bash
+# Start the orchestrator dashboard with simulated tasks
+./run-orchestrator.sh
+
+# Open browser to http://localhost:9090
+# See all tasks and their execution status in real-time
+```
+
+### Option 2: Learning Mode (Explore the Code)
+
+```bash
+# Interactive exploration of Scala 3 features and ETL
+./run-learning-mode.sh
+
+# Options:
+# 1. Compile all modules
+# 2. Run Spark ETL locally
+# 3. Explore Preprocessing module (Scala 3)
+# 4. Run tests
+# 5. Start interactive Scala REPL
+```
+
+### Option 3: Full Stack with Docker (Complete Pipeline)
+
+```bash
+# Start Kafka, Flink, and all infrastructure
+./run-full-stack.sh
+
+# Or manually:
 docker-compose up -d zookeeper kafka kafka-ui flink-jobmanager flink-taskmanager
 
 # Access web UIs
@@ -69,10 +105,10 @@ docker-compose up -d streaming-generator
 docker-compose up -d flink-streaming
 
 # Run Spark analytics
-docker-compose run etl
+sbt "etl/run"
 ```
 
-### Option 2: Local Development
+### Option 4: Manual Local Development
 
 ```bash
 # 1. Compile everything
