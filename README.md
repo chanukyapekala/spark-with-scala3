@@ -51,21 +51,22 @@ A production-ready example demonstrating how to use Scala 3 features alongside A
 - Java 17+
 - sbt 1.10+
 - Docker & Docker Compose (optional, for infrastructure)
+- `make` (usually pre-installed on macOS/Linux)
 
 ### Automated Setup (Recommended)
 
 ```bash
-# 1. Run setup script (checks Java, sbt, optionally starts Kafka)
-./setup.sh
+# 1. Check prerequisites (Java, sbt, Docker)
+make setup
 
 # 2. Choose your path...
 ```
 
-### Option 1: Interactive Dashboard (5 minutes)
+### Option 1: Interactive Dashboard (5 minutes) ⚡ **Quickest**
 
 ```bash
 # Start the orchestrator dashboard with simulated tasks
-./run-orchestrator.sh
+make orchestrator
 
 # Open browser to http://localhost:9090
 # See all tasks and their execution status in real-time
@@ -75,7 +76,7 @@ A production-ready example demonstrating how to use Scala 3 features alongside A
 
 ```bash
 # Interactive exploration of Scala 3 features and ETL
-./run-learning-mode.sh
+make learn
 
 # Options:
 # 1. Compile all modules
@@ -89,10 +90,10 @@ A production-ready example demonstrating how to use Scala 3 features alongside A
 
 ```bash
 # Start Kafka, Flink, and all infrastructure
-./run-full-stack.sh
+make full-stack
 
-# Or manually:
-docker-compose up -d zookeeper kafka kafka-ui flink-jobmanager flink-taskmanager
+# Then in another terminal, start Flink:
+docker-compose up -d flink-jobmanager flink-taskmanager
 
 # Access web UIs
 # - Kafka UI: http://localhost:8080
@@ -101,27 +102,36 @@ docker-compose up -d zookeeper kafka kafka-ui flink-jobmanager flink-taskmanager
 # Start the streaming generator
 docker-compose up -d streaming-generator
 
-# Submit Flink job
-docker-compose up -d flink-streaming
-
 # Run Spark analytics
-sbt "etl/run"
+make etl-run
 ```
 
-### Option 4: Manual Local Development
+### Option 4: Manual Development Commands
 
 ```bash
-# 1. Compile everything
-sbt compile
+# Compile everything
+make compile
 
-# 2. Start Kafka locally (install via brew)
-kafka-server-start /usr/local/etc/kafka/server.properties
+# Run specific modules
+make preprocessing-run           # Scala 3 event generator
+make etl-run                     # Spark batch analytics
 
-# 3. Run the pipeline
-export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-sbt "preprocessing/run"           # Generate events → Kafka
-sbt "flinkStreaming/run"          # Kafka → Parquet
-sbt "etl/run"                     # Parquet → Analytics
+# Test
+make test
+
+# Clean
+make clean
+
+# Docker management
+make docker-up                   # Start all services
+make docker-down                 # Stop all services
+make docker-logs                 # View logs
+```
+
+### All Available Commands
+
+```bash
+make help                         # Show all available commands
 ```
 
 ## 📦 Module Structure
