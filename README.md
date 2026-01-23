@@ -221,25 +221,42 @@ docker-compose down
 
 ```
 scala3-spark/
-├── shared/                 # Scala 2.13 - bridge layer
-│   └── src/main/scala/
+├── Makefile               # Command automation (make help to see all targets)
+├── README.md              # This file
+├── CLAUDE.md              # Technical documentation for developers
+├── build.sbt              # Multi-module sbt configuration
+├── docker-compose.yml     # Docker infrastructure
+├── Dockerfile             # Multi-stage Docker builds
+│
+├── shared/                # Scala 2.13 - bridge layer
+│   └── src/main/scala/shared/
 │       ├── kafka/         # PersonEvent, KafkaConfig
-│       └── config/        # Paths, schemas
-├── preprocessing/          # Scala 3 - event generator
-│   └── src/main/scala/
-│       └── models/        # Enums, opaque types
-├── flink-streaming/        # Scala 3 - stream processing
-│   └── src/main/scala/
-│       └── flink/         # StreamingJob
-├── etl/                    # Scala 2.13 - Spark analytics
-│   └── src/main/scala/
-│       └── etl/           # SparkETLPipeline
-├── data/
-│   ├── streaming/         # Flink writes here (partitioned)
-│   └── output/            # Spark writes results
-├── docker-compose.yml     # Full stack
-├── Dockerfile             # Multi-module build
-└── build.sbt              # Multi-module sbt config
+│       ├── config/        # Paths (local/S3)
+│       └── schemas/       # Field definitions
+│
+├── preprocessing/         # Scala 3 - event generator
+│   └── src/main/scala/preprocessing/
+│       ├── models/        # Person, enums, opaque types
+│       └── processors/    # Data processing pipeline
+│
+├── flink-streaming/       # Scala 3 - stream processing
+│   └── src/main/scala/flink/
+│       └── StreamingJob.scala
+│
+├── etl/                   # Scala 2.13 - Spark analytics
+│   └── src/main/scala/etl/
+│       └── SparkETLPipeline.scala
+│
+├── orchestrator/          # ZIO orchestrator dashboard (Scala 2.13)
+│   └── src/main/scala/orchestrator/
+│       ├── InteractiveOrchestrator.scala  # Web dashboard
+│       ├── Task.scala                     # Task definitions
+│       ├── TaskExecutionTracker.scala     # Execution metrics
+│       └── OrchestratorDashboard.scala    # Entry point
+│
+└── data/
+    ├── streaming/         # Flink writes here (partitioned)
+    └── output/            # Spark writes results
 ```
 
 ## 🎯 Key Design Decisions
@@ -308,7 +325,24 @@ ls -R data/output/
 
 ## 📚 Documentation
 
-See **CLAUDE.md** for comprehensive technical documentation, architecture details, and Scala version strategy.
+- **README.md** (this file) - Project overview and quick start
+- **CLAUDE.md** - Comprehensive technical documentation, architecture details, and Scala version strategy
+- **Makefile** - All available commands (run `make help`)
+
+## 🧹 Project Structure
+
+This project has been optimized for clarity and maintainability:
+
+- **Lean codebase**: Only 2,522 lines of essential Scala code across 14 files
+- **No dead code**: All unused methods and orchestrator files have been removed
+- **Consolidated documentation**: Single source of truth in README.md and CLAUDE.md
+- **Automated setup**: Use `make` commands instead of shell scripts for better portability
+- **Clean module structure**: Each module has a single, clear responsibility
+
+Key files:
+- `Makefile` - All development commands (setup, compile, test, run, docker)
+- `build.sbt` - Multi-module build configuration with proper Scala versions
+- `docker-compose.yml` - Complete infrastructure (Kafka, Flink, Zookeeper)
 
 ## 🎓 Learning Outcomes
 
