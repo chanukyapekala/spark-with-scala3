@@ -10,7 +10,7 @@ import com.github.mjakubowski84.parquet4s.{ParquetWriter, ParquetReader}
 import shared.schemas.PersonSchema
 import org.apache.logging.log4j.LogManager
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 
 // ============================================
 // FEATURE #7: GIVEN/USING (Type Classes)

@@ -1,13 +1,12 @@
 package preprocessing
 
 import preprocessing.models.{Person, PersonStatus, types}
-import preprocessing.processors.{Processor, DataProcessor, measure}
+import preprocessing.processors.Processor
 import shared.config.Paths
 import cats.effect.{IO, IOApp}
 import org.apache.logging.log4j.LogManager
 import java.nio.file.{Paths as JPaths}
 import java.time.Instant
-import java.util.UUID
 import io.circe.syntax.*
 
 // ============================================

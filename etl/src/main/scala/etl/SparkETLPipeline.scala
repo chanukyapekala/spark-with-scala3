@@ -2,7 +2,6 @@ package etl
 
 import org.apache.spark.sql.{SparkSession, DataFrame}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types._
 import shared.config.Paths
 import shared.schemas.PersonSchema
 import org.apache.logging.log4j.LogManager
