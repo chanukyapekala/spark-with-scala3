@@ -189,6 +189,7 @@ object InteractiveOrchestrator:
       |    <div class="container">
       |        <div class="header">
       |            <h1>🎯 Pipeline Orchestrator</h1>
+      |            <p style="font-size: 1.3em; margin-bottom: 15px; font-weight: 500;">📊 Scala Workflow: Real-time Streaming + Batch Analytics</p>
       |            <p>Interactive Task DAG - Click on tasks to view details</p>
       |        </div>
       |
@@ -224,7 +225,7 @@ object InteractiveOrchestrator:
       |    <div class="modal" id="workflowModal">
       |        <div class="modal-content">
       |            <div class="modal-header">
-      |                <div class="modal-title">🔄 Workflow Execution</div>
+      |                <div class="modal-title">🔄 Lambda Architecture Execution: Kafka → Flink → Spark</div>
       |                <button class="close-btn" onclick="closeWorkflowModal()">✕</button>
       |            </div>
       |            <div class="modal-body">
