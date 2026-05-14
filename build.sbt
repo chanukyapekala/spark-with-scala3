@@ -266,6 +266,11 @@ lazy val orchestrator = (project in file("orchestrator"))
     name := "orchestrator",
     scalaVersion := "3.5.2",
 
+    // Java options for Hadoop/Parquet compatibility
+    javaOptions ++= Seq(
+      "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+    ),
+
     libraryDependencies ++= Seq(
       // ZIO for pure functional orchestration
       "dev.zio" %% "zio" % "2.0.20",
@@ -274,6 +279,9 @@ lazy val orchestrator = (project in file("orchestrator"))
       "io.circe" %% "circe-core" % "0.14.6",
       "io.circe" %% "circe-generic" % "0.14.6",
       "io.circe" %% "circe-parser" % "0.14.6",
+
+      // Hadoop client (needed at runtime for Parquet I/O via preprocessing)
+      "org.apache.hadoop" % "hadoop-client" % "3.3.4",
 
       // Logging
       "org.apache.logging.log4j" % "log4j-api" % "2.20.0",
@@ -294,4 +302,4 @@ lazy val orchestrator = (project in file("orchestrator"))
     // Fork JVM for running
     fork := true
   )
-  .dependsOn(shared)  // Depends on Scala 2.13 shared module (Scala 3 can read 2.13)
+  .dependsOn(shared, preprocessing)  // shared (2.13) + preprocessing (3.5.2) for real data ops

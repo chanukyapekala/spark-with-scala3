@@ -263,11 +263,11 @@ object InteractiveOrchestrator:
       |                    </div>
       |                </div>
       |                <div class="detail-section">
-      |                    <div class="detail-label">📋 Sample Data (spark.show)</div>
+      |                    <div class="detail-label">Sample Data</div>
       |                    <div class="sample-data-container" id="modalSampleData" style="background: #f9f9f9; padding: 12px; border-radius: 8px; font-size: 0.8em; overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-family: monospace;"><tbody></tbody></table></div>
       |                </div>
       |                <div class="detail-section">
-      |                    <div class="detail-label">📊 Task Metadata</div>
+      |                    <div class="detail-label">Task Metadata</div>
       |                    <div class="task-data-container" id="modalTaskData" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f9f9f9; padding: 15px; border-radius: 8px; font-size: 0.9em;"></div>
       |                </div>
       |                <div class="detail-section">
@@ -683,8 +683,6 @@ object InteractiveOrchestrator:
                           val runtime = Runtime.default
                           val result = runtime.unsafe.run(task.run).getOrThrowFiberFailure()
 
-                          // Update tracker with results
-                          TaskExecutionTracker.updateProgress(taskId, result.duration / 1000) // Convert to seconds
                           if result.success then
                             TaskExecutionTracker.completeTask(taskId, true)
                           else

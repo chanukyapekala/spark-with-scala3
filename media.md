@@ -144,19 +144,27 @@ Data enrichment:
 └─ Active status flags
 ```
 
-### 5. **orchestrator** (Scala 2.13 + ZIO - Workflow Control)
-Interactive dashboard for monitoring and executing the entire pipeline.
+### 5. **orchestrator** (Scala 3.5.2 + ZIO - Workflow Control)
+Interactive dashboard that orchestrates the entire pipeline with **real data** — no mocks, no simulations.
+
+**What it actually does:**
+- Generates 500 real PersonEvent records per run
+- Writes Parquet files to a partitioned data lake (`dt=YYYY-MM-DD/`)
+- Reads back and validates every record from Parquet
+- Computes batch analytics (city stats, age distribution, status breakdown) — mirroring what Spark does
+- Tracks run history with cumulative totals across reruns
 
 **Why ZIO?**
 - Composable concurrent effects
 - Type-safe error handling
-- Non-blocking async operations
-- Clean state management
+- Non-blocking async execution of the DAG
+- Clean state management for task metrics
 
 **Features:**
-- Real-time task execution status
-- Task metrics and logs
-- Web dashboard (http://localhost:9090)
+- Web dashboard at http://localhost:9090
+- Real-time execution logs and metrics
+- Sample data tables populated from actual Parquet reads
+- Run history showing data growth over time
 - REST API for programmatic control
 
 ## 🔑 Key Architectural Decisions
@@ -182,12 +190,11 @@ Speed Layer (Real-time)      Batch Layer (Accuracy)
 | preprocessing | 3.5.2 | Modern features for event generation |
 | flink-streaming | 3.5.2 | Scala 3 syntax with Flink Java API |
 | etl | 2.13 | Full Spark compatibility |
-| orchestrator | 2.13 | Works with all modules |
+| orchestrator | 3.5.2 | Real data pipeline orchestration with ZIO |
 
 **Why not all Scala 3?**
-- Spark doesn't support Scala 3 yet
-- Kafka ecosystem primarily uses Scala 2.13
-- **Solution**: Use Scala 2.13 as bridge, Scala 3 where possible
+- Spark doesn't support Scala 3 yet (Databricks is stuck on 2.13)
+- **Solution**: Use Scala 2.13 as a bridge layer, Scala 3 everywhere else
 
 ### Decision 3: Parquet as Data Lake Format
 **Benefits:**
@@ -210,7 +217,7 @@ Flink uses EVENT time for windows = correct results!
 ## 📊 Code Quality Metrics
 
 After optimization:
-- **Lines of Code**: 2,522 (lean, focused)
+- **Lines of Code**: 2,685 (lean, focused)
 - **Scala Files**: 14 (minimal, essential)
 - **Documentation**: 2 files (consolidated)
 - **Build Tool**: Makefile (cross-platform)
@@ -266,7 +273,8 @@ Most tutorials show:
 **This project shows:**
 - How to manage Scala 2.13 + 3 together
 - Complete Lambda architecture implementation
-- Real data engineering patterns at scale
+- Real data flowing end-to-end: generate → Parquet → analytics → results
+- Interactive orchestrator dashboard with live metrics from real data
 - Modern Scala features in production context
 
 ## 🔗 Production Deployment
