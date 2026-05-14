@@ -1,0 +1,40 @@
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+.metals/
+.bsp/
+*.iml
+
+# Build artifacts
+target/
+project/target/
+project/project/
+
+# Data files (don't include in image)
+data/
+*.parquet
+*.csv
+*.json
+*.jsonl
+
+# Logs
+logs/
+*.log
+
+# Assembly JARs (will be built in container)
+*-assembly.jar
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+!README.md
+
+# Other
+scala3-etl/
