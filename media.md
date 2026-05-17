@@ -1,8 +1,8 @@
 # Building a Modern Data Platform: Scala 3 + Kafka + Flink + Spark
 
-## 💭 How This Project Started (Personal Story)
+## How This Project Started (Personal Story)
 
-It's been a while since I've written serious Scala code. In the meantime, Scala 3.5+ rolled out with some genuinely exciting features—enums with actual parameters, opaque types for true type safety, extension methods that make APIs feel natural, and given/using for elegant dependency injection.
+It's been a while since I've written serious Scala code. In the meantime, Scala 3.5+ rolled out with some genuinely exciting features — enums with actual parameters, opaque types for true type safety, extension methods that make APIs feel natural, and given/using for elegant dependency injection.
 
 I wanted to actually **use** these features in a real project, not just read about them in tutorials.
 
@@ -18,11 +18,11 @@ So the real challenge became: *How do I use Scala 3's amazing features while sti
 - Connected them seamlessly despite the version gap
 - Deployed everything as JARs to production (Databricks)
 
-This project is what came out of that exploration—a working blueprint for teams wanting modern Scala without sacrificing the Spark ecosystem.
+This project is what came out of that exploration — a working blueprint for teams wanting modern Scala without sacrificing the Spark ecosystem.
 
 ---
 
-## 🎯 Project Overview
+## Project Overview
 
 This project demonstrates a **production-ready streaming data platform** that combines the best of modern data engineering:
 
@@ -30,10 +30,11 @@ This project demonstrates a **production-ready streaming data platform** that co
 - **Batch analytics** with Apache Spark
 - **Modern language features** with Scala 3
 - **Event-driven architecture** with Kafka
+- **Workflow orchestration** with ZIO
 
 It's the kind of system used by companies like Uber, Netflix, and LinkedIn to process billions of events daily.
 
-## 🏗️ Architecture at a Glance
+## Architecture at a Glance
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -50,17 +51,20 @@ It's the kind of system used by companies like Uber, Netflix, and LinkedIn to pr
 │  └─ Decouples producers from consumers              │
 └────────────────────┬────────────────────────────────┘
                      │
-                     ▼
-┌─────────────────────────────────────────────────────┐
-│  Flink Streaming Job (Scala 3)                      │
-│  ├─ Consume from Kafka (real-time)                  │
-│  ├─ Event-time processing with 1-hour windows      │
-│  └─ Write partitioned Parquet to data lake          │
-│     (Format: dt=YYYY-MM-DD/hour=HH)                 │
-└────────────────────┬────────────────────────────────┘
-                     │ (Parquet files on disk/S3)
-                     │ Organized by date & hour
-                     ▼
+          ┌──────────┴──────────┐
+          ▼                     ▼
+┌──────────────────────┐  ┌──────────────────────────────┐
+│  Flink Streaming     │  │  ZIO Orchestrator (Scala 3)  │
+│  (Scala 3)           │  │  ├─ Generate 500 real events │
+│  ├─ Consume from     │  │  ├─ Write Parquet data lake  │
+│  │   Kafka (RT)      │  │  ├─ Read & validate records  │
+│  ├─ Event-time       │  │  ├─ Compute batch analytics  │
+│  │   processing      │  │  └─ Web dashboard @ :9090    │
+│  └─ Write Parquet    │  └──────────────────────────────┘
+└──────────┬───────────┘
+           │ (Parquet files on disk/S3)
+           │ Partitioned: dt=YYYY-MM-DD/hour=HH
+           ▼
 ┌─────────────────────────────────────────────────────┐
 │  Spark Batch Analytics (Scala 2.13)                 │
 │  ├─ Read Parquet data lake                          │
@@ -69,20 +73,20 @@ It's the kind of system used by companies like Uber, Netflix, and LinkedIn to pr
 │  └─ Write analytical results                        │
 └─────────────────────────────────────────────────────┘
 
-                    Lambda Architecture
-         (Real-time + Batch = Complete View)
+                  Lambda Architecture
+       (Real-time + Batch = Complete View)
 ```
 
-## 📦 The 5 Modules
+## The 5 Modules
 
-### 1. **shared** (Scala 2.13 - The Bridge)
+### 1. shared (Scala 2.13 — The Bridge)
 The glue that holds everything together.
 
 **Why Scala 2.13?**
 - All modules can depend on it
-- Scala 3 can read Scala 2.13 bytecode ✅
-- Scala 2.13 can read Scala 2.13 bytecode ✅
-- Scala 2 CANNOT read Scala 3 bytecode ❌
+- Scala 3 can read Scala 2.13 bytecode
+- Scala 2.13 can read Scala 2.13 bytecode
+- Scala 2 CANNOT read Scala 3 bytecode
 
 **What it contains:**
 ```
@@ -92,7 +96,7 @@ The glue that holds everything together.
 └─ PersonSchema         (Field definitions)
 ```
 
-### 2. **preprocessing** (Scala 3 - Event Generation)
+### 2. preprocessing (Scala 3 — Event Generation)
 Generates synthetic event data and showcases Scala 3 features.
 
 **Key Scala 3 Features Demonstrated:**
@@ -110,7 +114,7 @@ Person.create("Alice", "alice@example.com", 25, "NYC")
   )
 ```
 
-### 3. **flink-streaming** (Scala 3 - Stream Processing)
+### 3. flink-streaming (Scala 3 — Stream Processing)
 Real-time processing engine that transforms events into structured data.
 
 **Architecture:**
@@ -126,7 +130,7 @@ Kafka → Deserialize → Validate → Time Windows → Aggregate → Parquet
 - Automatic partition creation by date/hour
 - Fault tolerance with state backends
 
-### 4. **etl** (Scala 2.13 - Batch Analytics)
+### 4. etl (Scala 2.13 — Batch Analytics)
 Spark jobs that run analytics on the data lake.
 
 **What it computes:**
@@ -144,7 +148,7 @@ Data enrichment:
 └─ Active status flags
 ```
 
-### 5. **orchestrator** (Scala 3.5.2 + ZIO - Workflow Control)
+### 5. orchestrator (Scala 3 + ZIO — Workflow Control)
 Interactive dashboard that orchestrates the entire pipeline with **real data** — no mocks, no simulations.
 
 **What it actually does:**
@@ -167,7 +171,7 @@ Interactive dashboard that orchestrates the entire pipeline with **real data** �
 - Run history showing data growth over time
 - REST API for programmatic control
 
-## 🔑 Key Architectural Decisions
+## Key Architectural Decisions
 
 ### Decision 1: Lambda Architecture
 ```
@@ -186,7 +190,7 @@ Speed Layer (Real-time)      Batch Layer (Accuracy)
 ### Decision 2: Multi-Version Scala
 | Module | Version | Reason |
 |--------|---------|--------|
-| shared | 2.13 | Bridge layer - all modules depend on it |
+| shared | 2.13 | Bridge layer — all modules depend on it |
 | preprocessing | 3.5.2 | Modern features for event generation |
 | flink-streaming | 3.5.2 | Scala 3 syntax with Flink Java API |
 | etl | 2.13 | Full Spark compatibility |
@@ -214,15 +218,19 @@ Event time:       09:58 → 09:59 → 10:00
 Flink uses EVENT time for windows = correct results!
 ```
 
-## 📊 Code Quality Metrics
+### Decision 5: Real Data Orchestration (No Mocks)
+The orchestrator doesn't simulate the pipeline — it *runs* it. Every execution generates real PersonEvent records, writes real Parquet files, and computes real analytics. This means the dashboard always reflects the actual state of the data lake, not a canned demo.
 
-After optimization:
+## Code Quality Metrics
+
+After extensive optimization:
 - **Lines of Code**: 2,685 (lean, focused)
 - **Scala Files**: 14 (minimal, essential)
-- **Documentation**: 2 files (consolidated)
-- **Build Tool**: Makefile (cross-platform)
+- **Documentation**: 2 files (README.md + CLAUDE.md)
+- **Build Tool**: Makefile with 20+ targets
+- **Removed**: 7 unused orchestrator files, 8 duplicate docs, 72 LOC of dead code
 
-## 🚀 Getting Started (3 Options)
+## Getting Started (3 Options)
 
 ### Option 1: 5-Minute Dashboard
 ```bash
@@ -243,41 +251,43 @@ make full-stack   # Start Kafka, Zookeeper, Flink
 sbt "etl/run"     # Run Spark analytics
 ```
 
-## 💡 Key Takeaways
+## Key Takeaways
 
 ### For Data Engineers
-✅ Lambda architecture combines real-time speed with batch accuracy
-✅ Kafka decouples data producers from consumers
-✅ Flink provides exactly-once semantics (no data loss)
-✅ Spark excels at analytical queries on the data lake
+- Lambda architecture combines real-time speed with batch accuracy
+- Kafka decouples data producers from consumers
+- Flink provides exactly-once semantics (no data loss)
+- Spark excels at analytical queries on the data lake
 
 ### For Scala Developers
-✅ Scala 3 features (enums, opaque types) improve type safety
-✅ ZIO provides elegant concurrent effect composition
-✅ Multi-version Scala can work if architected carefully
-✅ Functional programming shines in data pipelines
+- Scala 3 features (enums, opaque types) improve type safety
+- ZIO provides elegant concurrent effect composition
+- Multi-version Scala can work if architected carefully
+- Functional programming shines in data pipelines
 
 ### For System Design
-✅ Event-driven architecture scales horizontally
-✅ Partitioning by time enables efficient data management
-✅ Decoupling layers (Kafka) improves resilience
-✅ Orchestration layer (ZIO) handles complex workflows
+- Event-driven architecture scales horizontally
+- Partitioning by time enables efficient data management
+- Decoupling layers (Kafka) improves resilience
+- A real-data orchestrator beats mock dashboards for credibility
 
-## 🎓 What Makes This Project Different
+## What Makes This Project Different
 
 Most tutorials show:
 - Single-language systems (not multi-version)
 - Only real-time OR batch (not both)
 - Toy examples (not production patterns)
+- Mock dashboards with fake data
 
 **This project shows:**
-- How to manage Scala 2.13 + 3 together
+- How to manage Scala 2.13 + 3 together in one build
 - Complete Lambda architecture implementation
 - Real data flowing end-to-end: generate → Parquet → analytics → results
 - Interactive orchestrator dashboard with live metrics from real data
 - Modern Scala features in production context
+- Clean codebase (14 files, 2,685 LOC) after aggressive optimization
 
-## 🔗 Production Deployment
+## Production Deployment
 
 This architecture scales to billions of events:
 
@@ -298,23 +308,24 @@ Cloud Deployment (AWS/GCP/Azure):
 
 ---
 
-## 📖 Learn More
+## Learn More
 
 **GitHub**: [chanukyapekala/spark-with-scala3](https://github.com/chanukyapekala/spark-with-scala3)
 
 **Key Files**:
-- `README.md` - Quick start guide
-- `CLAUDE.md` - Technical deep dive
-- `Makefile` - All development commands
+- `README.md` — Quick start guide
+- `CLAUDE.md` — Technical deep dive
+- `Makefile` — All development commands (`make help`)
 
 **Technologies Used**:
 - Apache Kafka (Event streaming)
 - Apache Flink (Stream processing)
 - Apache Spark (Batch analytics)
 - Scala 3.5.2 & 2.13.12 (JVM language)
-- ZIO (Functional effects)
+- ZIO (Functional effects & orchestration)
 - fs2 (Functional streams)
+- Parquet (Columnar data lake format)
 
 ---
 
-*Built to demonstrate production-ready patterns for modern data engineering with Scala 3.* 🚀
+*Built to demonstrate production-ready patterns for modern data engineering with Scala 3.*
